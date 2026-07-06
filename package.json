@@ -1,0 +1,24 @@
+{
+  "name": "requisition-system-complete",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/auth-js": "^2.110.0",
+    "@supabase/functions-js": "^2.110.0",
+    "@supabase/postgrest-js": "^2.110.0",
+    "@supabase/realtime-js": "^2.110.0",
+    "@supabase/storage-js": "^2.110.0",
+    "@supabase/supabase-js": "^2.110.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "vite": "^6.4.3"
+  }
+}
