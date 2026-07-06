@@ -27,10 +27,8 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
   const [items, setItems] = useState([]);
   const [logs, setLogs] = useState([]);
   const [attachments, setAttachments] = useState([]);
+  const [comment, setComment] = useState('');
   const [working, setWorking] = useState(false);
-
-  const [actionModal, setActionModal] = useState(null);
-  const [actionComment, setActionComment] = useState('');
 
   async function loadDetail() {
     if (!requestId) return;
@@ -164,42 +162,13 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
     await addLog(action, step, customComment);
   }
 
-  function openActionModal({
-    title,
-    description,
-    confirmLabel,
-    variant = 'primary',
-    required = false,
-    placeholder = 'Add a note for this action...',
-    action,
-  }) {
-    setActionComment('');
-    setActionModal({
-      title,
-      description,
-      confirmLabel,
-      variant,
-      required,
-      placeholder,
-      action,
-    });
-  }
+  async function runAction(action, options = {}) {
+    const note = comment.trim();
 
-  function closeActionModal() {
-    if (working) return;
-    setActionModal(null);
-    setActionComment('');
-  }
-
-  async function confirmAction() {
-    if (!actionModal) return;
-
-    const note = actionComment.trim();
-
-    if (actionModal.required && !note) {
+    if (options.requireFeedback && !note) {
       onToast({
         type: 'error',
-        message: 'Feedback is required for this action.',
+        message: `${options.actionName || 'This action'} requires feedback / reason.`,
       });
       return;
     }
@@ -207,10 +176,9 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
     setWorking(true);
 
     try {
-      await actionModal.action(note);
+      await action(note);
 
-      setActionModal(null);
-      setActionComment('');
+      setComment('');
 
       onToast({
         type: 'success',
@@ -468,552 +436,413 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
     permissions.canReturn;
 
   return (
-    <>
-      <div className="detail-layout">
-        <div className="detail-main stack gap-20">
-          <button className="back-btn" onClick={backTo}>
-            <ArrowLeft size={16} /> Back
-          </button>
+    <div className="detail-layout">
+      <div className="detail-main stack gap-20">
+        <button className="back-btn" onClick={backTo}>
+          <ArrowLeft size={16} /> Back
+        </button>
 
-          <div className="card detail-card">
-            <div className="detail-title-row">
-              <div>
-                <span className="eyebrow">{request.request_no}</span>
-                <h2>{request.title}</h2>
-                <p>{request.purpose}</p>
-              </div>
-
-              <Badge status={request.status} />
+        <div className="card detail-card">
+          <div className="detail-title-row">
+            <div>
+              <span className="eyebrow">{request.request_no}</span>
+              <h2>{request.title}</h2>
+              <p>{request.purpose}</p>
             </div>
 
-            <div className="detail-grid">
-              <div>
-                <span>Type</span>
-                <strong>
-                  {request.request_type === 'material'
-                    ? `Material / ${request.material_action}`
-                    : 'General'}
-                </strong>
-              </div>
-
-              <div>
-                <span>Priority</span>
-                <strong>{request.priority}</strong>
-              </div>
-
-              <div>
-                <span>Department</span>
-                <strong>{request.departments?.name || '—'}</strong>
-              </div>
-
-              <div>
-                <span>Expected Date</span>
-                <strong>{formatDate(request.expected_date)}</strong>
-              </div>
-
-              <div>
-                <span>Requester</span>
-                <strong>
-                  {request.requester?.full_name || request.requester?.email}
-                </strong>
-              </div>
-
-              <div>
-                <span>Line Manager</span>
-                <strong>
-                  {request.line_manager?.full_name ||
-                    request.line_manager?.email ||
-                    '—'}
-                </strong>
-              </div>
-            </div>
+            <Badge status={request.status} />
           </div>
 
-          <div className="card detail-card">
-            <div className="card-header compact-header">
-              <h3>Items</h3>
+          <div className="detail-grid">
+            <div>
+              <span>Type</span>
+              <strong>
+                {request.request_type === 'material'
+                  ? `Material / ${request.material_action}`
+                  : 'General'}
+              </strong>
             </div>
 
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th>Qty</th>
-                    <th>Cost</th>
-                    <th>Supplier</th>
-                    <th>Needed / Return</th>
-                    <th>Remark</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.item_name}</td>
-                      <td>
-                        {item.quantity} {item.unit}
-                      </td>
-                      <td>{money(item.estimated_cost)}</td>
-                      <td>{item.supplier || '—'}</td>
-                      <td>
-                        {formatDate(item.expected_needed_date)} /{' '}
-                        {formatDate(item.expected_return_date)}
-                      </td>
-                      <td>{item.remark || '—'}</td>
-                    </tr>
-                  ))}
-
-                  {!items.length && (
-                    <tr>
-                      <td colSpan="6" className="muted-cell">
-                        No items added.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="card detail-card">
-            <div className="card-header compact-header">
-              <h3>Attachments</h3>
+            <div>
+              <span>Priority</span>
+              <strong>{request.priority}</strong>
             </div>
 
-            {!attachments.length ? (
-              <p className="muted-text">No attachments uploaded.</p>
-            ) : (
-              <div className="attachment-list">
-                {attachments.map((file) => (
-                  <button
-                    className="attachment-item"
-                    key={file.id}
-                    onClick={() => openAttachment(file)}
-                  >
-                    <Download size={16} />
-                    <span>{file.file_name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div>
+              <span>Department</span>
+              <strong>{request.departments?.name || '—'}</strong>
+            </div>
+
+            <div>
+              <span>Expected Date</span>
+              <strong>{formatDate(request.expected_date)}</strong>
+            </div>
+
+            <div>
+              <span>Requester</span>
+              <strong>
+                {request.requester?.full_name || request.requester?.email}
+              </strong>
+            </div>
+
+            <div>
+              <span>Line Manager</span>
+              <strong>
+                {request.line_manager?.full_name ||
+                  request.line_manager?.email ||
+                  '—'}
+              </strong>
+            </div>
           </div>
         </div>
 
-        <aside className="detail-side stack gap-20">
-          {canShowActions && (
-            <div className="card action-panel">
-              <h3>Approval Action</h3>
+        <div className="card detail-card">
+          <div className="card-header compact-header">
+            <h3>Items</h3>
+          </div>
 
-              <div className="stack gap-10">
-                {permissions.canLineManagerAct && (
-                  <>
-                    {isGeneralRequest && (
-                      <ActionButton
-                        variant="primary"
-                        disabled={working}
-                        onClick={() =>
-                          openActionModal({
-                            title: 'Approve Request',
-                            description:
-                              'Approve this general request. You may add an optional note.',
-                            confirmLabel: 'Confirm Approve',
-                            action: (note) => handleLineManagerApprove(note),
-                          })
-                        }
-                      >
-                        <Check size={16} /> Approve
-                      </ActionButton>
-                    )}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Cost</th>
+                  <th>Supplier</th>
+                  <th>Needed / Return</th>
+                  <th>Remark</th>
+                </tr>
+              </thead>
 
-                    {isBuyMaterial && (
-                      <ActionButton
-                        variant="primary"
-                        disabled={working}
-                        onClick={() =>
-                          openActionModal({
-                            title: 'Pass to Admin Team',
-                            description:
-                              'Approve the department need and pass this buy request to Admin Team for purchasing review.',
-                            confirmLabel: 'Pass to Admin',
-                            action: (note) =>
-                              handlePassToAdmin('line_manager', note),
-                          })
-                        }
-                      >
-                        <CornerUpRight size={16} /> Pass to Admin
-                      </ActionButton>
-                    )}
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.item_name}</td>
 
-                    {!isBuyMaterial && (
-                      <ActionButton
-                        disabled={working}
-                        onClick={() =>
-                          openActionModal({
-                            title: 'Pass to Admin Team',
-                            description:
-                              'Pass this request to Admin Team for support or processing.',
-                            confirmLabel: 'Pass to Admin',
-                            action: (note) =>
-                              handlePassToAdmin('line_manager', note),
-                          })
-                        }
-                      >
-                        <CornerUpRight size={16} /> Pass to Admin
-                      </ActionButton>
-                    )}
+                    <td>
+                      {item.quantity} {item.unit}
+                    </td>
 
-                    <ActionButton
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Pass to Management',
-                          description:
-                            'Pass this request to Management for higher-level approval.',
-                          confirmLabel: 'Pass to Management',
-                          action: (note) =>
-                            handlePassToManagement('line_manager', note),
-                        })
-                      }
-                    >
-                      <CornerUpRight size={16} /> Pass to Management
-                    </ActionButton>
+                    <td>{money(item.estimated_cost)}</td>
 
-                    <ActionButton
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Return for Correction',
-                          description:
-                            'Explain clearly what the requester needs to correct before resubmitting.',
-                          confirmLabel: 'Send Back',
-                          required: true,
-                          placeholder:
-                            'Example: Please attach the quotation and update the expected date.',
-                          action: (note) => handleReturn('line_manager', note),
-                        })
-                      }
-                    >
-                      <RotateCcw size={16} /> Return for Correction
-                    </ActionButton>
+                    <td>{item.supplier || '—'}</td>
 
-                    <ActionButton
-                      variant="danger"
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Reject Request',
-                          description:
-                            'Please provide a clear reason for rejecting this request.',
-                          confirmLabel: 'Confirm Reject',
-                          variant: 'danger',
-                          required: true,
-                          placeholder:
-                            'Example: This request is rejected because the quantity is higher than the current requirement.',
-                          action: (note) => handleReject('line_manager', note),
-                        })
-                      }
-                    >
-                      <X size={16} /> Reject
-                    </ActionButton>
-                  </>
+                    <td>
+                      {formatDate(item.expected_needed_date)} /{' '}
+                      {formatDate(item.expected_return_date)}
+                    </td>
+
+                    <td>{item.remark || '—'}</td>
+                  </tr>
+                ))}
+
+                {!items.length && (
+                  <tr>
+                    <td colSpan="6" className="muted-cell">
+                      No items added.
+                    </td>
+                  </tr>
                 )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-                {permissions.canAdminReview && (
-                  <>
-                    {isUseMaterial ? (
-                      <ActionButton
-                        variant="primary"
-                        disabled={working}
-                        onClick={() =>
-                          openActionModal({
-                            title: 'Approve and Issue Material',
-                            description:
-                              'Approve this use request and issue the material from inventory.',
-                            confirmLabel: 'Approve & Issue',
-                            action: (note) => handleIssueMaterial(note),
-                          })
-                        }
-                      >
-                        <Send size={16} /> Approve & Issue Material
-                      </ActionButton>
-                    ) : (
-                      <ActionButton
-                        variant="primary"
-                        disabled={working}
-                        onClick={() =>
-                          openActionModal({
-                            title: 'Admin Approve',
-                            description:
-                              'Approve this request from Admin Team. You may add an optional note.',
-                            confirmLabel: 'Confirm Approve',
-                            action: (note) => handleAdminApprove(note),
-                          })
-                        }
-                      >
-                        <Check size={16} /> Admin Approve
-                      </ActionButton>
-                    )}
+        <div className="card detail-card">
+          <div className="card-header compact-header">
+            <h3>Attachments</h3>
+          </div>
 
-                    <ActionButton
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Pass to Management',
-                          description:
-                            'Pass this request to Management for final approval.',
-                          confirmLabel: 'Pass to Management',
-                          action: (note) =>
-                            handlePassToManagement('admin', note),
-                        })
-                      }
-                    >
-                      <CornerUpRight size={16} /> Pass to Management
-                    </ActionButton>
-
-                    <ActionButton
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Return for Correction',
-                          description:
-                            'Explain clearly what the requester needs to correct before resubmitting.',
-                          confirmLabel: 'Send Back',
-                          required: true,
-                          placeholder:
-                            'Example: Please attach supporting documents before resubmitting.',
-                          action: (note) => handleReturn('admin', note),
-                        })
-                      }
-                    >
-                      <RotateCcw size={16} /> Return for Correction
-                    </ActionButton>
-
-                    <ActionButton
-                      variant="danger"
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Reject Request',
-                          description:
-                            'Please provide a clear reason for rejecting this request.',
-                          confirmLabel: 'Confirm Reject',
-                          variant: 'danger',
-                          required: true,
-                          placeholder:
-                            'Example: This request is rejected because the item is not available for this purpose.',
-                          action: (note) => handleReject('admin', note),
-                        })
-                      }
-                    >
-                      <X size={16} /> Reject
-                    </ActionButton>
-                  </>
-                )}
-
-                {permissions.canManagementAct && (
-                  <>
-                    <ActionButton
-                      variant="primary"
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Management Approve',
-                          description:
-                            'Approve this request as Management. You may add an optional note.',
-                          confirmLabel: 'Confirm Approve',
-                          action: (note) => handleManagementApprove(note),
-                        })
-                      }
-                    >
-                      <Check size={16} /> Management Approve
-                    </ActionButton>
-
-                    <ActionButton
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Return for Correction',
-                          description:
-                            'Explain clearly what the requester needs to correct before resubmitting.',
-                          confirmLabel: 'Send Back',
-                          required: true,
-                          placeholder:
-                            'Example: Please revise the quantity and provide more details.',
-                          action: (note) => handleReturn('management', note),
-                        })
-                      }
-                    >
-                      <RotateCcw size={16} /> Return for Correction
-                    </ActionButton>
-
-                    <ActionButton
-                      variant="danger"
-                      disabled={working}
-                      onClick={() =>
-                        openActionModal({
-                          title: 'Reject Request',
-                          description:
-                            'Please provide a clear reason for rejecting this request.',
-                          confirmLabel: 'Confirm Reject',
-                          variant: 'danger',
-                          required: true,
-                          placeholder:
-                            'Example: This request is rejected because it does not meet approval requirements.',
-                          action: (note) => handleReject('management', note),
-                        })
-                      }
-                    >
-                      <X size={16} /> Reject
-                    </ActionButton>
-                  </>
-                )}
-
-                {permissions.canIssueMaterial && (
-                  <ActionButton
-                    variant="primary"
-                    disabled={working}
-                    onClick={() =>
-                      openActionModal({
-                        title: 'Issue Material',
-                        description:
-                          'Issue the approved material from inventory.',
-                        confirmLabel: 'Issue Material',
-                        action: (note) => handleIssueMaterial(note),
-                      })
-                    }
-                  >
-                    <Send size={16} /> Issue Material
-                  </ActionButton>
-                )}
-
-                {permissions.canComplete && (
-                  <ActionButton
-                    disabled={working}
-                    onClick={() =>
-                      openActionModal({
-                        title: 'Mark Completed',
-                        description:
-                          'Mark this approved request as completed.',
-                        confirmLabel: 'Mark Completed',
-                        action: (note) => handleComplete(note),
-                      })
-                    }
-                  >
-                    <Check size={16} /> Mark Completed
-                  </ActionButton>
-                )}
-
-                {permissions.canReturn && (
-                  <ActionButton
-                    variant="primary"
-                    disabled={working}
-                    onClick={() =>
-                      openActionModal({
-                        title: 'Mark Returned',
-                        description:
-                          'Confirm that the issued material has been returned to inventory.',
-                        confirmLabel: 'Mark Returned',
-                        action: (note) => handleReturnMaterial(note),
-                      })
-                    }
-                  >
-                    <RotateCcw size={16} /> Mark Returned
-                  </ActionButton>
-                )}
-              </div>
+          {!attachments.length ? (
+            <p className="muted-text">No attachments uploaded.</p>
+          ) : (
+            <div className="attachment-list">
+              {attachments.map((file) => (
+                <button
+                  className="attachment-item"
+                  key={file.id}
+                  onClick={() => openAttachment(file)}
+                >
+                  <Download size={16} />
+                  <span>{file.file_name}</span>
+                </button>
+              ))}
             </div>
           )}
-
-          <div className="card action-panel">
-            <h3>Approval Timeline</h3>
-
-            <div className="timeline">
-              {logs.map((log) => (
-                <div className="timeline-item" key={log.id}>
-                  <div className="timeline-dot" />
-
-                  <div>
-                    <strong>{log.action.replaceAll('_', ' ')}</strong>
-
-                    <span>
-                      {log.actor?.full_name || log.actor?.email || 'System'} ·{' '}
-                      {formatDateTime(log.created_at)}
-                    </span>
-
-                    {log.comment && <p>{log.comment}</p>}
-                  </div>
-                </div>
-              ))}
-
-              {!logs.length && (
-                <p className="muted-text">No approval actions yet.</p>
-              )}
-            </div>
-          </div>
-        </aside>
+        </div>
       </div>
 
-      {actionModal && (
-        <div className="approval-modal-overlay">
-          <div className="approval-modal card">
-            <div className="approval-modal-header">
-              <div>
-                <h3>{actionModal.title}</h3>
-                <p>{actionModal.description}</p>
-              </div>
-
-              <button
-                type="button"
-                className="icon-btn"
-                onClick={closeActionModal}
-                disabled={working}
-              >
-                <X size={16} />
-              </button>
-            </div>
+      <aside className="detail-side stack gap-20">
+        {canShowActions && (
+          <div className="card action-panel">
+            <h3>Approval Action</h3>
 
             <div className="form-group">
               <label>
-                Feedback / Note{' '}
-                {actionModal.required ? (
-                  <span className="required-text">Required</span>
-                ) : (
-                  <span className="optional-text">Optional</span>
-                )}
+                Feedback / Reason
+                <span className="optional-text">
+                  Required for Reject / Return for Correction
+                </span>
               </label>
 
               <textarea
                 className="textarea"
-                value={actionComment}
-                onChange={(event) => setActionComment(event.target.value)}
-                placeholder={actionModal.placeholder}
-                autoFocus
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                placeholder="Write feedback, reason, or approval note here..."
               />
             </div>
 
-            <div className="approval-modal-actions">
-              <button
-                type="button"
-                className="btn btn-light"
-                onClick={closeActionModal}
-                disabled={working}
-              >
-                Cancel
-              </button>
+            <div className="stack gap-10">
+              {permissions.canLineManagerAct && (
+                <>
+                  {isGeneralRequest && (
+                    <ActionButton
+                      variant="primary"
+                      disabled={working}
+                      onClick={() => runAction(handleLineManagerApprove)}
+                    >
+                      <Check size={16} /> Approve
+                    </ActionButton>
+                  )}
 
-              <button
-                type="button"
-                className={`btn btn-${actionModal.variant}`}
-                onClick={confirmAction}
-                disabled={working}
-              >
-                {working ? 'Please wait...' : actionModal.confirmLabel}
-              </button>
+                  {isBuyMaterial && (
+                    <ActionButton
+                      variant="primary"
+                      disabled={working}
+                      onClick={() =>
+                        runAction((note) =>
+                          handlePassToAdmin('line_manager', note)
+                        )
+                      }
+                    >
+                      <CornerUpRight size={16} /> Pass to Admin
+                    </ActionButton>
+                  )}
+
+                  {!isBuyMaterial && (
+                    <ActionButton
+                      disabled={working}
+                      onClick={() =>
+                        runAction((note) =>
+                          handlePassToAdmin('line_manager', note)
+                        )
+                      }
+                    >
+                      <CornerUpRight size={16} /> Pass to Admin
+                    </ActionButton>
+                  )}
+
+                  <ActionButton
+                    disabled={working}
+                    onClick={() =>
+                      runAction((note) =>
+                        handlePassToManagement('line_manager', note)
+                      )
+                    }
+                  >
+                    <CornerUpRight size={16} /> Pass to Management
+                  </ActionButton>
+
+                  <ActionButton
+                    disabled={working}
+                    onClick={() =>
+                      runAction(
+                        (note) => handleReturn('line_manager', note),
+                        {
+                          requireFeedback: true,
+                          actionName: 'Return for Correction',
+                        }
+                      )
+                    }
+                  >
+                    <RotateCcw size={16} /> Return for Correction
+                  </ActionButton>
+
+                  <ActionButton
+                    variant="danger"
+                    disabled={working}
+                    onClick={() =>
+                      runAction(
+                        (note) => handleReject('line_manager', note),
+                        {
+                          requireFeedback: true,
+                          actionName: 'Reject',
+                        }
+                      )
+                    }
+                  >
+                    <X size={16} /> Reject
+                  </ActionButton>
+                </>
+              )}
+
+              {permissions.canAdminReview && (
+                <>
+                  {isUseMaterial ? (
+                    <ActionButton
+                      variant="primary"
+                      disabled={working}
+                      onClick={() => runAction(handleIssueMaterial)}
+                    >
+                      <Send size={16} /> Approve & Issue Material
+                    </ActionButton>
+                  ) : (
+                    <ActionButton
+                      variant="primary"
+                      disabled={working}
+                      onClick={() => runAction(handleAdminApprove)}
+                    >
+                      <Check size={16} /> Admin Approve
+                    </ActionButton>
+                  )}
+
+                  <ActionButton
+                    disabled={working}
+                    onClick={() =>
+                      runAction((note) =>
+                        handlePassToManagement('admin', note)
+                      )
+                    }
+                  >
+                    <CornerUpRight size={16} /> Pass to Management
+                  </ActionButton>
+
+                  <ActionButton
+                    disabled={working}
+                    onClick={() =>
+                      runAction(
+                        (note) => handleReturn('admin', note),
+                        {
+                          requireFeedback: true,
+                          actionName: 'Return for Correction',
+                        }
+                      )
+                    }
+                  >
+                    <RotateCcw size={16} /> Return for Correction
+                  </ActionButton>
+
+                  <ActionButton
+                    variant="danger"
+                    disabled={working}
+                    onClick={() =>
+                      runAction(
+                        (note) => handleReject('admin', note),
+                        {
+                          requireFeedback: true,
+                          actionName: 'Reject',
+                        }
+                      )
+                    }
+                  >
+                    <X size={16} /> Reject
+                  </ActionButton>
+                </>
+              )}
+
+              {permissions.canManagementAct && (
+                <>
+                  <ActionButton
+                    variant="primary"
+                    disabled={working}
+                    onClick={() => runAction(handleManagementApprove)}
+                  >
+                    <Check size={16} /> Management Approve
+                  </ActionButton>
+
+                  <ActionButton
+                    disabled={working}
+                    onClick={() =>
+                      runAction(
+                        (note) => handleReturn('management', note),
+                        {
+                          requireFeedback: true,
+                          actionName: 'Return for Correction',
+                        }
+                      )
+                    }
+                  >
+                    <RotateCcw size={16} /> Return for Correction
+                  </ActionButton>
+
+                  <ActionButton
+                    variant="danger"
+                    disabled={working}
+                    onClick={() =>
+                      runAction(
+                        (note) => handleReject('management', note),
+                        {
+                          requireFeedback: true,
+                          actionName: 'Reject',
+                        }
+                      )
+                    }
+                  >
+                    <X size={16} /> Reject
+                  </ActionButton>
+                </>
+              )}
+
+              {permissions.canIssueMaterial && (
+                <ActionButton
+                  variant="primary"
+                  disabled={working}
+                  onClick={() => runAction(handleIssueMaterial)}
+                >
+                  <Send size={16} /> Issue Material
+                </ActionButton>
+              )}
+
+              {permissions.canComplete && (
+                <ActionButton
+                  disabled={working}
+                  onClick={() => runAction(handleComplete)}
+                >
+                  <Check size={16} /> Mark Completed
+                </ActionButton>
+              )}
+
+              {permissions.canReturn && (
+                <ActionButton
+                  variant="primary"
+                  disabled={working}
+                  onClick={() => runAction(handleReturnMaterial)}
+                >
+                  <RotateCcw size={16} /> Mark Returned
+                </ActionButton>
+              )}
             </div>
           </div>
+        )}
+
+        <div className="card action-panel">
+          <h3>Approval Timeline</h3>
+
+          <div className="timeline">
+            {logs.map((log) => (
+              <div className="timeline-item" key={log.id}>
+                <div className="timeline-dot" />
+
+                <div>
+                  <strong>{log.action.replaceAll('_', ' ')}</strong>
+
+                  <span>
+                    {log.actor?.full_name || log.actor?.email || 'System'} ·{' '}
+                    {formatDateTime(log.created_at)}
+                  </span>
+
+                  {log.comment && <p>{log.comment}</p>}
+                </div>
+              </div>
+            ))}
+
+            {!logs.length && (
+              <p className="muted-text">No approval actions yet.</p>
+            )}
+          </div>
         </div>
-      )}
-    </>
+      </aside>
+    </div>
   );
 }
