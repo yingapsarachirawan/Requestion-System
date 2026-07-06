@@ -1,7 +1,209 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+.table-input.wide {
+  min-width: 150px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.mb-18 {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.badge-muted {
+  color: #64748b;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.badge-info {
+  color: #1687ad;
+  background: rgba(69, 175, 211, 0.12);
+  border-color: rgba(69, 175, 211, 0.22);
+}
+
+.badge-warning {
+  color: #9a6a00;
+  background: #fff8db;
+  border-color: #f6df7a;
+}
+
+.badge-success {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.badge-danger {
+  color: #be123c;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+}
+
+.badge-muted {
+  color: #64748b;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.badge-info {
+  color: #1687ad;
+  background: rgba(69, 175, 211, 0.12);
+  border-color: rgba(69, 175, 211, 0.22);
+}
+
+.badge-warning {
+  color: #9a6a00;
+  background: #fff8db;
+  border-color: #f6df7a;
+}
+
+.badge-success {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.badge-danger {
+  color: #be123c;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.badge-primary {
+  color: #1687ad;
+  background: rgba(69, 175, 211, 0.12);
+  border-color: rgba(69, 175, 211, 0.22);
+}
+
+.badge-light {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+.feedback-preview {
+  max-width: 280px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.feedback-preview-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-size: 12px;
+  text-transform: capitalize;
+  margin-bottom: 5px;
+}
+
+.feedback-preview p {
+  margin: 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.feedback-preview small {
+  display: block;
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 /* =========================================
    T.A Coin Requisition Login Page
 ========================================= */
+/* Approval feedback modal */
+.approval-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.36);
+  backdrop-filter: blur(8px);
+}
+
+.approval-modal {
+  width: min(520px, 100%);
+  padding: 22px;
+  border-radius: 22px;
+}
+
+.approval-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.approval-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.approval-modal-header p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.required-text {
+  margin-left: 6px;
+  color: #be123c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.optional-text {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.approval-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
 
 .requisition-login-page {
   min-height: 100vh;
