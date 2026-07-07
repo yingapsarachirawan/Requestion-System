@@ -70,7 +70,7 @@ export default function CreateRequestPage({
   const [inventory, setInventory] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
 
-  const [attachment, setAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [editingRequest, setEditingRequest] = useState(null);
 
   const [form, setForm] = useState(() => getDefaultForm(profile));
@@ -94,11 +94,13 @@ export default function CreateRequestPage({
     async function loadLists() {
       const [deptRes, managerRes, inventoryRes] = await Promise.all([
         supabase.from('departments').select('*').order('name'),
+
         supabase
           .from('profiles')
           .select('id, full_name, email, role')
           .eq('role', 'line_manager')
           .order('full_name'),
+
         supabase.from('inventory_items').select('*').order('item_name'),
       ]);
 
@@ -126,7 +128,7 @@ export default function CreateRequestPage({
     if (!editingRequestId) {
       setEditingRequest(null);
       setExistingAttachments([]);
-      setAttachment(null);
+      setAttachments([]);
       setForm(getDefaultForm(profile));
       return;
     }
@@ -173,6 +175,7 @@ export default function CreateRequestPage({
 
       setEditingRequest(request);
       setExistingAttachments(attachmentsRes.data || []);
+      setAttachments([]);
 
       const loadedItems = (itemsRes.data || []).map((item) => ({
         inventory_item_id: item.inventory_item_id || '',
@@ -281,27 +284,45 @@ export default function CreateRequestPage({
     }));
   }
 
-  async function uploadAttachment(requestId) {
-    if (!attachment) return;
+  function handleAttachmentSelect(event) {
+    const selectedFiles = Array.from(event.target.files || []);
 
-    const safeName = attachment.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `${requestId}/${Date.now()}-${safeName}`;
+    if (!selectedFiles.length) return;
 
-    const { error: uploadError } = await supabase.storage
-      .from('request-attachments')
-      .upload(path, attachment, { upsert: false });
+    setAttachments((prev) => [...prev, ...selectedFiles]);
 
-    if (uploadError) throw uploadError;
+    event.target.value = '';
+  }
 
-    const { error: attachError } = await supabase.from('request_attachments').insert({
-      request_id: requestId,
-      file_name: attachment.name,
-      file_path: path,
-      file_type: attachment.type,
-      uploaded_by: profile.id,
-    });
+  function removeSelectedAttachment(index) {
+    setAttachments((prev) => prev.filter((_, fileIndex) => fileIndex !== index));
+  }
 
-    if (attachError) throw attachError;
+  async function uploadAttachments(requestId) {
+    if (!attachments.length) return;
+
+    for (const file of attachments) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${requestId}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('request-attachments')
+        .upload(path, file, { upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { error: attachError } = await supabase
+        .from('request_attachments')
+        .insert({
+          request_id: requestId,
+          file_name: file.name,
+          file_path: path,
+          file_type: file.type,
+          uploaded_by: profile.id,
+        });
+
+      if (attachError) throw attachError;
+    }
   }
 
   async function openExistingAttachment(file) {
@@ -462,7 +483,7 @@ export default function CreateRequestPage({
 
     if (itemsError) throw itemsError;
 
-    await uploadAttachment(request.id);
+    await uploadAttachments(request.id);
 
     const logComment = saveAsDraft
       ? 'Request saved as draft.'
@@ -505,7 +526,7 @@ export default function CreateRequestPage({
 
     if (itemsError) throw itemsError;
 
-    await uploadAttachment(editingRequestId);
+    await uploadAttachments(editingRequestId);
 
     const { error: updateError } = await supabase
       .from('requisition_requests')
@@ -1025,7 +1046,7 @@ export default function CreateRequestPage({
       )}
 
       <section className="section">
-        <h3 className="section-title">Attachment</h3>
+        <h3 className="section-title">Attachments</h3>
 
         {existingAttachments.length > 0 && (
           <div className="attachment-list mb-12">
@@ -1043,21 +1064,50 @@ export default function CreateRequestPage({
           </div>
         )}
 
+        {attachments.length > 0 && (
+          <div className="selected-attachments mb-12">
+            {attachments.map((file, index) => (
+              <div className="selected-attachment-item" key={`${file.name}-${index}`}>
+                <div>
+                  <strong>{file.name}</strong>
+                  <span>{Math.ceil(file.size / 1024)} KB</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="icon-btn danger"
+                  onClick={() => removeSelectedAttachment(index)}
+                  title="Remove file"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <label className="upload-box">
           <Upload size={20} />
+
           <span>
-            {attachment
-              ? attachment.name
+            {attachments.length
+              ? `${attachments.length} new file(s) selected`
               : isEditMode
-                ? 'Upload new supporting document if needed'
-                : 'Upload quotation, product image, or supporting document'}
+                ? 'Upload new supporting documents if needed'
+                : 'Upload quotations, product images, or supporting documents'}
           </span>
 
           <input
             type="file"
-            onChange={(event) => setAttachment(event.target.files?.[0] || null)}
+            multiple
+            onChange={handleAttachmentSelect}
           />
         </label>
+
+        <p className="muted-text mt-10">
+          You can upload multiple files, such as quotation, product image,
+          supplier document, or supporting approval file.
+        </p>
       </section>
 
       <section className="section">

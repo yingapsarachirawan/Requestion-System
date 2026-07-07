@@ -4,6 +4,7 @@ import {
   Check,
   CornerUpRight,
   Download,
+  Printer,
   RotateCcw,
   Send,
   X,
@@ -404,6 +405,10 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
     }
   }
 
+  function handlePrintPdf() {
+    window.print();
+  }
+
   if (loading) {
     return <div className="loading-box card">Loading request detail...</div>;
   }
@@ -436,11 +441,18 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
     permissions.canReturn;
 
   return (
-    <div className="detail-layout">
+    <div className="detail-layout print-area">
       <div className="detail-main stack gap-20">
-        <button className="back-btn" onClick={backTo}>
-          <ArrowLeft size={16} /> Back
-        </button>
+        <div className="detail-toolbar no-print">
+          <button className="back-btn" onClick={backTo}>
+            <ArrowLeft size={16} /> Back
+          </button>
+
+          <button className="btn btn-light" onClick={handlePrintPdf}>
+            <Printer size={16} />
+            Export / Print PDF
+          </button>
+        </div>
 
         <div className="card detail-card">
           <div className="detail-title-row">
@@ -574,7 +586,7 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
 
       <aside className="detail-side stack gap-20">
         {canShowActions && (
-          <div className="card action-panel">
+          <div className="card action-panel no-print">
             <h3>Approval Action</h3>
 
             <div className="form-group">
@@ -840,6 +852,39 @@ export default function RequestDetailPage({ requestId, profile, onToast, backTo 
             {!logs.length && (
               <p className="muted-text">No approval actions yet.</p>
             )}
+          </div>
+        </div>
+
+        <div className="card action-panel print-only print-signature-card">
+          <h3>Approval Signatures</h3>
+
+          <div className="signature-grid">
+            <div className="signature-box">
+              <span>Prepared By</span>
+              <strong>
+                {request.requester?.full_name || request.requester?.email || '—'}
+              </strong>
+              <div className="signature-line" />
+              <small>Signature / Date</small>
+            </div>
+
+            <div className="signature-box">
+              <span>Checked By</span>
+              <strong>
+                {request.line_manager?.full_name ||
+                  request.line_manager?.email ||
+                  'Line Manager'}
+              </strong>
+              <div className="signature-line" />
+              <small>Signature / Date</small>
+            </div>
+
+            <div className="signature-box">
+              <span>Approved By</span>
+              <strong>Admin / Management</strong>
+              <div className="signature-line" />
+              <small>Signature / Date</small>
+            </div>
           </div>
         </div>
       </aside>

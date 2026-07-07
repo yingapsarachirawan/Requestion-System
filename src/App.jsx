@@ -11,6 +11,7 @@ import InventoryPage from './pages/InventoryPage.jsx';
 import ReportsPage from './pages/ReportsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import RequestDetailPage from './pages/RequestDetailPage.jsx';
+import UserManagementPage from './pages/UserManagementPage.jsx';
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -30,7 +31,64 @@ export default function App() {
     showToast.timer = window.setTimeout(() => setToast(null), 4500);
   }
 
+  function isPageAllowed(page, currentProfile) {
+    const role = currentProfile?.role;
+
+    const rolePages = {
+      officer: [
+        'dashboard',
+        'create',
+        'my-requests',
+        'inventory',
+        'settings',
+        'request-detail',
+      ],
+
+      line_manager: [
+        'dashboard',
+        'my-requests',
+        'approval',
+        'inventory',
+        'settings',
+        'request-detail',
+      ],
+
+      admin: [
+        'dashboard',
+        'my-requests',
+        'approval',
+        'inventory',
+        'reports',
+        'settings',
+        'request-detail',
+      ],
+
+      management: [
+        'dashboard',
+        'my-requests',
+        'approval',
+        'inventory',
+        'reports',
+        'user-management',
+        'settings',
+        'request-detail',
+      ],
+    };
+
+    return rolePages[role]?.includes(page) ?? false;
+  }
+
   function setActivePage(page) {
+    if (profile && !isPageAllowed(page, profile)) {
+      showToast({
+        type: 'error',
+        message: 'You do not have permission to open this page.',
+      });
+
+      setActivePageState('dashboard');
+      return;
+    }
+
     setActivePageState(page);
 
     if (page !== 'request-detail') {
@@ -55,6 +113,11 @@ export default function App() {
     }
 
     setProfile(data);
+
+    if (data?.must_change_password) {
+      setActivePageState('settings');
+    }
+
     return data;
   }
 
@@ -118,6 +181,14 @@ export default function App() {
   }
 
   function editRequest(id) {
+    if (!isPageAllowed('create', profile)) {
+      showToast({
+        type: 'error',
+        message: 'You do not have permission to edit requests.',
+      });
+      return;
+    }
+
     setPreviousPage(activePage);
     setSelectedRequestId(null);
     setEditingRequestId(id);
@@ -125,13 +196,26 @@ export default function App() {
   }
 
   function createNewRequest() {
+    if (!isPageAllowed('create', profile)) {
+      showToast({
+        type: 'error',
+        message: 'Only Officer / Staff accounts can create requests.',
+      });
+      return;
+    }
+
     setSelectedRequestId(null);
     setEditingRequestId(null);
     setActivePageState('create');
   }
 
   function backToPrevious() {
-    setActivePageState(previousPage || 'my-requests');
+    const safePrevious =
+      previousPage && isPageAllowed(previousPage, profile)
+        ? previousPage
+        : 'dashboard';
+
+    setActivePageState(safePrevious);
     setSelectedRequestId(null);
     setEditingRequestId(null);
   }
@@ -155,6 +239,7 @@ export default function App() {
           setActivePage={setActivePage}
           onToast={showToast}
           createNewRequest={createNewRequest}
+          openRequest={openRequest}
         />
       ),
 
@@ -195,6 +280,14 @@ export default function App() {
       reports: (
         <ReportsPage
           onToast={showToast}
+        />
+      ),
+
+      'user-management': (
+        <UserManagementPage
+          profile={profile}
+          onToast={showToast}
+          refreshProfile={refreshProfile}
         />
       ),
 

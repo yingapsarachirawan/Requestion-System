@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, UserRound } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient.js';
 import logo from '../assets/ta-coin-logo.png';
 
 export default function AuthPage({ onToast }) {
-  const [mode, setMode] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     email: '',
     password: '',
-    full_name: '',
-    role: 'officer',
   });
 
   const update = (key, value) => {
@@ -21,40 +18,37 @@ export default function AuthPage({ onToast }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (!form.email.trim()) {
+      onToast({
+        type: 'error',
+        message: 'Please enter your email.',
+      });
+      return;
+    }
+
+    if (!form.password) {
+      onToast({
+        type: 'error',
+        message: 'Please enter your password.',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: form.email,
-          password: form.password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email.trim(),
+        password: form.password,
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        onToast({
-          type: 'success',
-          message: 'Logged in successfully.',
-        });
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email: form.email,
-          password: form.password,
-          options: {
-            data: {
-              full_name: form.full_name,
-              role: form.role,
-            },
-          },
-        });
-
-        if (error) throw error;
-
-        onToast({
-          type: 'success',
-          message: 'Account created. Check your email if confirmation is enabled.',
-        });
-      }
+      onToast({
+        type: 'success',
+        message: 'Logged in successfully.',
+      });
     } catch (error) {
       onToast({
         type: 'error',
@@ -91,65 +85,14 @@ export default function AuthPage({ onToast }) {
           <div className="login-form-inner">
             <p className="login-eyebrow">Internal Access</p>
 
-            <h2>{mode === 'login' ? 'Welcome back' : 'Create account'}</h2>
+            <h2>Welcome back</h2>
 
             <p className="login-subtitle">
-              {mode === 'login'
-                ? 'Sign in with your registered company account.'
-                : 'Create an authorized account for the requisition system.'}
+              Sign in with your registered company account. Accounts are created
+              by Management only.
             </p>
 
-            <div className="login-tabs">
-              <button
-                type="button"
-                className={mode === 'login' ? 'active' : ''}
-                onClick={() => setMode('login')}
-              >
-                Login
-              </button>
-
-              <button
-                type="button"
-                className={mode === 'signup' ? 'active' : ''}
-                onClick={() => setMode('signup')}
-              >
-                Create Account
-              </button>
-            </div>
-
             <form onSubmit={handleSubmit} className="login-form">
-              {mode === 'signup' && (
-                <>
-                  <div className="login-field">
-                    <label>Full Name</label>
-
-                    <div className="login-input-wrap">
-                      <UserRound size={19} />
-                      <input
-                        value={form.full_name}
-                        onChange={(event) => update('full_name', event.target.value)}
-                        placeholder="Your full name"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="login-field">
-                    <label>Role</label>
-
-                    <select
-                      value={form.role}
-                      onChange={(event) => update('role', event.target.value)}
-                    >
-                      <option value="officer">Officer / Staff</option>
-                      <option value="line_manager">Line Manager</option>
-                      <option value="admin">Admin Team</option>
-                      <option value="management">Management</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
               <div className="login-field">
                 <label>Email</label>
 
@@ -160,6 +103,7 @@ export default function AuthPage({ onToast }) {
                     value={form.email}
                     onChange={(event) => update('email', event.target.value)}
                     placeholder="staff@tacoin.com"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -175,6 +119,7 @@ export default function AuthPage({ onToast }) {
                     value={form.password}
                     onChange={(event) => update('password', event.target.value)}
                     placeholder="Enter password"
+                    autoComplete="current-password"
                     minLength="6"
                     required
                   />
@@ -191,15 +136,12 @@ export default function AuthPage({ onToast }) {
               </div>
 
               <button className="login-submit" disabled={loading}>
-                {loading
-                  ? 'Please wait...'
-                  : mode === 'login'
-                    ? 'Login'
-                    : 'Create Account'}
+                {loading ? 'Logging in...' : 'Login'}
               </button>
 
               <p className="login-note">
-                Only authorized staff can access this internal requisition system.
+                Need an account? Please contact Management or the system
+                administrator. Public sign up is disabled for security.
               </p>
             </form>
           </div>
