@@ -76,7 +76,8 @@ export default function CreateRequestPage({
   const [form, setForm] = useState(() => getDefaultForm(profile));
 
   const isEditMode = Boolean(editingRequestId);
-  const isReturnedCorrection = editingRequest?.status === 'returned_for_correction';
+  const isReturnedCorrection =
+    editingRequest?.status === 'returned_for_correction';
   const isDraftEdit = editingRequest?.status === 'draft';
 
   const isMaterial = form.request_type === 'material';
@@ -89,6 +90,22 @@ export default function CreateRequestPage({
   const selectedInventoryById = useMemo(() => {
     return Object.fromEntries(inventory.map((item) => [item.id, item]));
   }, [inventory]);
+
+  const selectedDepartment = useMemo(() => {
+    return departments.find((department) => department.id === form.department_id);
+  }, [departments, form.department_id]);
+
+  const selectedDepartmentName =
+    selectedDepartment?.name || 'No default department assigned';
+
+  const selectedLineManager = useMemo(() => {
+    return managers.find((manager) => manager.id === form.line_manager_id);
+  }, [managers, form.line_manager_id]);
+
+  const selectedLineManagerName =
+    selectedLineManager?.full_name ||
+    selectedLineManager?.email ||
+    'No default line manager assigned';
 
   useEffect(() => {
     async function loadLists() {
@@ -191,8 +208,10 @@ export default function CreateRequestPage({
       }));
 
       setForm({
-        department_id: request.department_id || '',
-        line_manager_id: request.line_manager_id || profile?.line_manager_id || '',
+        department_id:
+          request.department_id || profile?.department_id || '',
+        line_manager_id:
+          request.line_manager_id || profile?.line_manager_id || '',
         request_type: request.request_type || 'material',
         material_action:
           request.request_type === 'material'
@@ -223,7 +242,11 @@ export default function CreateRequestPage({
         next.items = [{ ...emptyItem }];
       }
 
-      if (key === 'request_type' && value === 'material' && !prev.material_action) {
+      if (
+        key === 'request_type' &&
+        value === 'material' &&
+        !prev.material_action
+      ) {
         next.material_action = 'buy';
       }
 
@@ -364,11 +387,11 @@ export default function CreateRequestPage({
     if (!profile?.id) return 'User profile is missing. Please log in again.';
 
     if (!form.department_id && !saveAsDraft) {
-      return 'Please select a department.';
+      return 'Your account does not have a default Department. Please ask Management to assign one.';
     }
 
     if (needsLineManager && !form.line_manager_id && !saveAsDraft) {
-      return 'Please select a line manager.';
+      return 'Your account does not have a default Line Manager. Please ask Management to assign one.';
     }
 
     if (!form.title.trim() && !saveAsDraft) {
@@ -405,7 +428,12 @@ export default function CreateRequestPage({
           }
         }
 
-        if (isUse && item.return_required && !item.expected_return_date && !saveAsDraft) {
+        if (
+          isUse &&
+          item.return_required &&
+          !item.expected_return_date &&
+          !saveAsDraft
+        ) {
           return 'Please select an expected return date for returnable items.';
         }
       }
@@ -437,7 +465,8 @@ export default function CreateRequestPage({
           ? null
           : Number(item.estimated_cost),
       supplier: item.supplier || null,
-      expected_needed_date: item.expected_needed_date || form.expected_date || null,
+      expected_needed_date:
+        item.expected_needed_date || form.expected_date || null,
       expected_return_date: item.expected_return_date || null,
       return_required: Boolean(item.return_required),
       remark: item.remark || null,
@@ -446,8 +475,10 @@ export default function CreateRequestPage({
 
   function buildRequestPayload(workflow, saveAsDraft = false) {
     return {
-      department_id: form.department_id || null,
-      line_manager_id: needsLineManager ? form.line_manager_id || null : null,
+      department_id: form.department_id || profile?.department_id || null,
+      line_manager_id: needsLineManager
+        ? form.line_manager_id || profile?.line_manager_id || null
+        : null,
       request_type: form.request_type,
       material_action: isMaterial ? form.material_action : null,
       title: form.title.trim(),
@@ -639,8 +670,9 @@ export default function CreateRequestPage({
 
       {isReturnedCorrection && (
         <div className="info-box full mb-18">
-          This request was returned for correction. Open the request detail or
-          My Requests feedback preview to review the approver note before resubmitting.
+          This request was returned for correction. Open the request detail or My
+          Requests feedback preview to review the approver note before
+          resubmitting.
         </div>
       )}
 
@@ -649,7 +681,9 @@ export default function CreateRequestPage({
 
         <div className="requester-card">
           <div className="requester-avatar">
-            {(profile?.full_name || profile?.email || 'U').slice(0, 2).toUpperCase()}
+            {(profile?.full_name || profile?.email || 'U')
+              .slice(0, 2)
+              .toUpperCase()}
           </div>
 
           <div className="requester-info">
@@ -661,35 +695,25 @@ export default function CreateRequestPage({
         <div className="form-grid mt-18">
           <div className="form-group">
             <label>Department</label>
-            <select
-              className="select"
-              value={form.department_id}
-              onChange={(event) => update('department_id', event.target.value)}
-            >
-              <option value="">Select department</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
+
+            <input
+              className="input"
+              value={selectedDepartmentName}
+              disabled
+              readOnly
+            />
           </div>
 
           {needsLineManager ? (
             <div className="form-group">
-              <label>Line Manager</label>
-              <select
-                className="select"
-                value={form.line_manager_id}
-                onChange={(event) => update('line_manager_id', event.target.value)}
-              >
-                <option value="">Select line manager</option>
-                {managers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {manager.full_name || manager.email}
-                  </option>
-                ))}
-              </select>
+              <label>Default Line Manager</label>
+
+              <input
+                className="input"
+                value={selectedLineManagerName}
+                disabled
+                readOnly
+              />
             </div>
           ) : (
             <div className="info-box">
@@ -700,6 +724,24 @@ export default function CreateRequestPage({
             </div>
           )}
         </div>
+
+        {!form.department_id && (
+          <div className="info-box full mt-18">
+            <strong>No default department assigned.</strong>
+            <br />
+            Please ask Management to assign your department before submitting a
+            request.
+          </div>
+        )}
+
+        {needsLineManager && !form.line_manager_id && (
+          <div className="info-box full mt-18">
+            <strong>No default Line Manager assigned.</strong>
+            <br />
+            Please ask Management to assign your default Line Manager before
+            submitting General or Buy Material requests.
+          </div>
+        )}
       </section>
 
       <section className="section">
@@ -811,7 +853,8 @@ export default function CreateRequestPage({
             <span>
               <strong>Requires Management Approval</strong>
               <small>
-                Turn this on for special, high-value, or policy-sensitive requests.
+                Turn this on for special, high-value, or policy-sensitive
+                requests.
               </small>
             </span>
           </label>
@@ -870,7 +913,11 @@ export default function CreateRequestPage({
                           className="select"
                           value={item.inventory_item_id}
                           onChange={(event) =>
-                            updateItem(index, 'inventory_item_id', event.target.value)
+                            updateItem(
+                              index,
+                              'inventory_item_id',
+                              event.target.value
+                            )
                           }
                         >
                           <option value="">Select inventory item</option>
@@ -948,7 +995,11 @@ export default function CreateRequestPage({
                             min="0"
                             value={item.estimated_cost}
                             onChange={(event) =>
-                              updateItem(index, 'estimated_cost', event.target.value)
+                              updateItem(
+                                index,
+                                'estimated_cost',
+                                event.target.value
+                              )
                             }
                             placeholder="Optional"
                           />
@@ -1067,7 +1118,10 @@ export default function CreateRequestPage({
         {attachments.length > 0 && (
           <div className="selected-attachments mb-12">
             {attachments.map((file, index) => (
-              <div className="selected-attachment-item" key={`${file.name}-${index}`}>
+              <div
+                className="selected-attachment-item"
+                key={`${file.name}-${index}`}
+              >
                 <div>
                   <strong>{file.name}</strong>
                   <span>{Math.ceil(file.size / 1024)} KB</span>
@@ -1097,11 +1151,7 @@ export default function CreateRequestPage({
                 : 'Upload quotations, product images, or supporting documents'}
           </span>
 
-          <input
-            type="file"
-            multiple
-            onChange={handleAttachmentSelect}
-          />
+          <input type="file" multiple onChange={handleAttachmentSelect} />
         </label>
 
         <p className="muted-text mt-10">
@@ -1154,11 +1204,7 @@ export default function CreateRequestPage({
           {loading ? 'Saving...' : 'Save as Draft'}
         </button>
 
-        <button
-          className="btn btn-light"
-          disabled={loading}
-          onClick={handleCancel}
-        >
+        <button className="btn btn-light" disabled={loading} onClick={handleCancel}>
           Cancel
         </button>
 
